@@ -1,0 +1,51 @@
+name: Build Win
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.2
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2.31.0
+        with:
+          msystem: CLANG64
+          update: true
+          pacboy: >-
+            toolchain:p
+            meson:p
+            ninja:p
+            pkgconf:p
+            libxml2:p
+            7zip:p
+            uv:p
+
+      - name: Configure and build
+        env:
+          MESON_ARGS: >-
+            --buildtype release
+            --prefer-static
+            --default-library=static
+            -Dcpp_link_args=-static
+        run: uv build --wheel --verbose
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: wheel-win_amd64
+          path: dist/*.whl
